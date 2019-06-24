@@ -1,0 +1,139 @@
+
+import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.LazyOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
+
+import java.util.StringTokenizer;
+
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.lib.input.FileSplit;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
+
+
+
+public class MultipleFileWordCount {
+
+ 
+
+public static class MyMapper extends Mapper<LongWritable, Text, Text, IntWritable> {
+
+ Text emitkey = new Text();
+ IntWritable emitvalue = new IntWritable(1);
+
+ public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+
+  String filePathString = ((FileSplit) context.getInputSplit()).getPath().getName().toString();
+  String line = value.toString();
+  StringTokenizer tokenizer = new StringTokenizer(line);
+  while (tokenizer.hasMoreTokens()) {
+
+   String filepathword = filePathString + "*" + tokenizer.nextToken();
+   emitkey.set(filepathword);
+   context.write(emitkey, emitvalue);
+  }
+ }
+}
+public static class MyReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
+	 Text emitkey = new Text();
+	 IntWritable emitvalue = new IntWritable();
+	 private MultipleOutputs<Text, IntWritable> multipleoutputs;
+
+	 public void setup(Context context) throws IOException, InterruptedException {
+	  multipleoutputs = new MultipleOutputs<Text, IntWritable>(context);
+	 }
+
+	 public void reduce(Text key, Iterable<IntWritable> values, Context context)
+	   throws IOException, InterruptedException {
+	  int sum = 0;
+
+	  for (IntWritable value : values) {
+	   sum = sum + value.get();
+	  }
+	  String pathandword = key.toString();
+	  String[] splitted = pathandword.split("\\*");
+	  String path = splitted[0];
+	  String word = splitted[1];
+	  emitkey.set(word);
+	  emitvalue.set(sum);
+	  System.out.println("word:" + word + "\t" + "sum:" + sum + "\t" + "path:  " + path);
+	  multipleoutputs.write(emitkey, emitvalue, ("/NewOut/"+path));
+	 }
+
+	 public void cleanup(Context context) throws IOException, InterruptedException {
+	  multipleoutputs.close();
+	 }
+}
+public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException {
+	
+	Configuration conf = new Configuration();
+	  @SuppressWarnings("deprecation")
+	Job myJob = new Job(conf, "Multiwordcount");
+	  args = new GenericOptionsParser(conf, args).getRemainingArgs();
+	  FileSystem fs = FileSystem.get(new Configuration());
+	  fs.delete(new Path("/NewOut/"), true);
+
+	  myJob.setJarByClass(MultipleFileWordCount.class);
+	  myJob.setMapperClass(MyMapper.class);
+	  myJob.setReducerClass(MyReducer.class);
+	  myJob.setMapOutputKeyClass(Text.class);
+	  myJob.setMapOutputValueClass(IntWritable.class);
+	//  myJob.setNumReduceTasks(0);
+	  myJob.setOutputKeyClass(Text.class);
+	  myJob.setOutputValueClass(IntWritable.class);
+	  LazyOutputFormat.setOutputFormatClass(myJob, TextOutputFormat.class);
+
+	  myJob.setInputFormatClass(TextInputFormat.class);
+	  myJob.setOutputFormatClass(TextOutputFormat.class);
+
+	  FileInputFormat.addInputPath(myJob, new Path(args[0]));
+	  FileOutputFormat.setOutputPath(myJob, new Path(args[1]));
+
+	  System.exit(myJob.waitForCompletion(true) ? 0 : 1);
+	 }
+
+	
+/*
+	  Configuration conf = new Configuration();
+	  Job job = Job.getInstance(conf, "Multiple file");
+
+	  args = new GenericOptionsParser(conf, args).getRemainingArgs();
+	  FileSystem fs = FileSystem.get(new Configuration());
+	  fs.delete(new Path("/NewOut/"), true);
+
+	  job.setJarByClass(MultipleFileWordCount.class);
+	  job.setMapperClass(MyMapper.class);
+	  job.setReducerClass(MyReducer.class);
+	  job.setMapOutputKeyClass(Text.class);
+	  job.setMapOutputValueClass(IntWritable.class);
+	//  myJob.setNumReduceTasks(0);
+	  job.setOutputKeyClass(Text.class);
+	  job.setOutputValueClass(IntWritable.class);
+	  LazyOutputFormat.setOutputFormatClass(job, TextOutputFormat.class);
+
+	  job.setInputFormatClass(TextInputFormat.class);
+	  job.setOutputFormatClass(TextOutputFormat.class);
+
+	  FileInputFormat.addInputPath(job, new Path(args[0]));
+	  FileOutputFormat.setOutputPath(job, new Path(args[1]));
+
+	  System.exit(job.waitForCompletion(true) ? 0 : 1);
+
+
+	}
+	*/
+}
+
+
