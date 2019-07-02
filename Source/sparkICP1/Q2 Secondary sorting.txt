@@ -1,0 +1,37 @@
+import org.apache.spark.{RangePartitioner, SparkConf, SparkContext}
+
+object secondary_sorting {
+  def main(args: Array[String]) {
+    System.setProperty("hadoop.home.dir","C:\\winutils" )
+
+    val conf = new SparkConf().setAppName("secondary").setMaster("local[*]")
+    // Create a Scala Spark Context.
+    val sc = new SparkContext(conf)
+    // Load our input data.
+    //val input =  sc.textFile(inputFile)
+    val input = sc.textFile("input2.txt")
+    // Split up into words.
+    val s = input.map(_.split(","))
+    // Transform into word and count
+    // val counts = words.map(word => (word, 1)).reduceByKey{case (x, y) => x + y}
+    val year= s.map(x=>(((x(0) +  '-' + x(1)), x(3)),x(3)))
+    //val words =s.flatMap(x=>x(3).split(","))
+    year.foreach(println)
+    //words.foreach(println)
+    val partition= new RangePartitioner(2,year)
+    val tuned=year.partitionBy(partition).persist()
+   tuned.saveAsTextFile("output10")
+    //val result= tuned.groupByKey().
+   val result =tuned.groupByKey().map(t => (t._1.toString()))
+   // val result= tuned.groupByKey()
+   val min = result.map(_.split(","))
+    val res= min.map(x=>(x(0),x(1))).groupByKey()
+   //val reduce= result.flatMap(line => line.split(",")).groupBy(x=> x(1))
+  // val fine = result.groupByKey(2).mapValues(iter => iter.toList.sortBy(r => r))
+    res.foreach(println)
+  }
+}
+
+
+
+
