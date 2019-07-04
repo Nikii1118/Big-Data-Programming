@@ -1,0 +1,15 @@
+import org.apache.spark._
+
+object mergesortFinal {
+  def main(args: Array[String]) {
+    val conf = new SparkConf().setAppName("mergeSort").setMaster("local[*]")
+    val sc = new SparkContext(conf)
+    val inputArray = Array(23, 15, 87, 9, 33, 98, 97, 372)
+    val inputRdd = sc.parallelize(inputArray)
+    val mappedInput = inputRdd.map( x => ( x, 1))
+    val sortedInput = mappedInput.sortByKey()
+    val output = sortedInput.map( x => x._1 )
+    val test = output.repartition(1)
+    test.saveAsTextFile("output1")
+  }
+}
