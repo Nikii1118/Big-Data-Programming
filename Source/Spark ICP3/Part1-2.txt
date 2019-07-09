@@ -1,0 +1,65 @@
+
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.sql.functions.avg
+object DataFrames1 {
+  def main(args: Array[String]) {
+    val conf = new SparkConf().setAppName("icp2").setMaster("local[*]")
+    // Create Spark Context.
+    val sc = new SparkContext(conf)
+    // Create SQL context
+    val spark = SparkSession
+      .builder()
+      .appName("Dataframes1")
+      .config("spark.master", "local")
+      .getOrCreate()
+    // Read in data
+    val df = spark.read.option("header", "True").csv("E:/kansas/Big data programming/survey.csv")
+    // Save data to file
+    df.write.option("header", "True").csv("E:/kansas/Big data programming/dff")
+
+
+    // Find duplicates
+    //val duplicates = theData.groupBy("Timestamp", "Age", "Gender", "Country", "State").count.filter(count)
+    df.show()
+     df.select(df("*")).distinct().show()
+
+
+    // groupby
+    df.groupBy(df("treatment")).count().show()
+
+    // splitting the data into tables
+    val test = df.select("Timestamp", "Age", "Gender", "state", "self_employed", "family_history", "treatment")
+    test.show()
+    val test2 = df.select("Timestamp", "remote_work", "tech_company", "benefits", "care_options", "wellness_program", "leave", "seek_help")
+    test2.show()
+
+    df.createOrReplaceTempView("test")
+    df.createOrReplaceTempView("test2")
+   // spark context
+   spark.sql("Select * from test left outer join test2 where test.Timestamp==test2.Timestamp").show()
+    //spark.sql("Select * from test join test2 where test.Timestamp-test2.Timestamp").show()
+    //join1
+    test.join(test2,Seq("Timestamp"),"inner").show()
+    //join 2
+    test.join(test2,Seq("Timestamp"),"rightouter").show()
+
+    // union
+    val splitFrame1 = df.select("*").limit(20)
+    val splitFrame2 = df.select("*").filter(df("family_history")==="Yes")
+    val unionDf = splitFrame1.union(splitFrame2).sort("Country")
+    unionDf.show()
+
+
+    // Aggregate 1 - average age of all Canadians
+    val aggQuery1 = df.select("*").filter(df("Country")==="Canada").agg(avg("Age"))
+    aggQuery1.show()
+    // Aggregate 2 -
+    val aggQuery2 = df.select("*").filter(df("Country")==="Canada" && df("family_history")==="No").count()
+    print("Total Number of Canadians: ")
+    print(aggQuery2)
+    // 13th row
+    val thirteenthRow= df.take(13).last
+    print(thirteenthRow)
+  }
+}
