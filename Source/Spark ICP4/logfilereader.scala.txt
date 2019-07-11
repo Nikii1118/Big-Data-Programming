@@ -1,0 +1,21 @@
+import org.apache.spark.SparkConf
+import org.apache.spark.streaming.{Seconds, StreamingContext}
+
+
+object logfilereader {
+  def main(args: Array[String]): Unit = {
+    System.setProperty("hadoop.home.dir", "C:\\winutils")
+    // Create the context with a 1 second batch size
+    val conf = new SparkConf().setMaster("local[2]").setAppName("logfilereader")
+    val ssc = new StreamingContext(conf, Seconds(5))
+    val data = ssc.textFileStream(("E:\\kansas\\Big data programming\\Source Code\\Source Code\\SparkStreamingScala\\SparkStreamingScala\\Output"))
+    //println("bdp")
+    println(data)
+    val wc = data.flatMap(_.split(" ")).map(x => (x, 1)).reduceByKey(_ + _)
+    wc.print()
+    println(wc)
+    ssc.start()
+    ssc.awaitTermination()
+  }
+
+}

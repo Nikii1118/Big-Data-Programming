@@ -1,0 +1,45 @@
+import java.io.{File, PrintWriter}
+
+import org.apache.spark._
+object file {
+  def main(args: Array[String]) {
+
+    System.setProperty("hadoop.home.dir", "C:\\winutils")
+    //val inputFile = args(0)
+    //val outputFile = args(1)
+    val conf = new SparkConf().setAppName("file").setMaster("local[*]")
+    // Create a Scala Spark Context.
+    val sc = new SparkContext(conf)
+    // Load our input data.
+    //val input =  sc.textFile(inputFile)
+   // val input = sc.textFile("lorem.txt.txt")
+   // val word = input.map(_.split("\n"))
+  //  println(word)
+    import scala.io.Source
+
+    val source = Source.fromFile("lorem.txt.txt")
+    //println(source)
+    val lines= source.getLines().toList
+   // println(lines)
+    var a =1
+    while(a<=30){
+      val listlen= lines.length
+      val RandomGen=scala.util.Random
+      val listNumber=RandomGen.nextInt(listlen)
+      // println(listNumber)
+
+      val fileWriter=new PrintWriter(new File("E:\\kansas\\Big data programming\\Source Code\\Source Code\\SparkStreamingScala\\SparkStreamingScala\\Output\\log" + a + ".txt"))
+        for(x <- listNumber to listlen-1){
+          fileWriter.write(lines(x))
+
+      }
+      fileWriter.close()
+
+      //Seconds(5)
+      Thread.sleep(5000)
+      a +=1
+    }
+    //for (line <- source.getLines())
+     // println(line)
+  }
+}
