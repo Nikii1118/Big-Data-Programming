@@ -1,0 +1,56 @@
+import org.apache.spark.sql.SparkSession
+import org.graphframes.GraphFrame
+
+object Graphs {
+  def main(args: Array[String]) {
+    System.setProperty("hadoop.home.dir", "C:\\winutils")
+    val spark = SparkSession
+      .builder()
+      .appName("Spark SQL basic example")
+      .config("spark.master", "local")
+      .getOrCreate()
+    // Importing data
+    val df = spark.read.option("header", "true").csv("E:/kansas/Big data programming/Datasets/Datasets/201508_trip_data.csv")
+    df.show()
+// concating the columns
+    df.createOrReplaceTempView("trip_data")
+    spark.sql(" SELECT `Trip ID`,`End Terminal`, CONCAT(`Trip ID`, `End Terminal`) AS ConcatInOne From trip_data" ).show()
+
+    //Renaming column
+    val ren = df.selectExpr("`Trip ID` as ID", "`Duration` as Dur","`Start Date` as ScheduledOn","`Start Station` as SS","`Start Terminal` as ST","`End Date` as ED","`End Station` as ES","`End Terminal` as ET","`Bike #` as B","`Subscriber Type` as Sty","`Zip Code` as ZC")
+    ren.show()
+  
+    val vertices= df.select("Start Terminal","Start Station").toDF("id","station name")
+
+    val edges= df.select("Start Terminal","End Terminal","Duration").toDF("src","dst","relationship")
+    // Removing duplictes in  data
+    val distinct_vertices= vertices.distinct()
+    val distinct_edges=edges.distinct()
+    distinct_vertices.show()
+    distinct_edges.show()
+   val duplicate_vertices= vertices.except(distinct_vertices)
+    val duplicate_edges= edges.except(distinct_edges)
+    duplicate_vertices.show()
+    duplicate_edges.show()
+    
+    // passing graph dataframe
+   val g=GraphFrame(distinct_vertices,distinct_edges)
+    
+// graph vertices and edges display
+ g.vertices.show()
+   g.edges.show()
+    
+    // graph in-degree and out-degree 
+    
+  g.inDegrees.show()
+ g.outDegrees.show()
+    
+    // Motif function
+    val motif = g.find("(80)-[]->(6)")
+  motif.show
+    
+    g.degrees.show()
+
+  }
+}
+
