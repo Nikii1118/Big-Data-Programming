@@ -1,0 +1,44 @@
+import org.apache.spark.sql.SparkSession
+import org.graphframes.GraphFrame
+import org.apache.spark.sql.functions._
+
+object Graphs {
+  def main(args: Array[String]) {
+    System.setProperty("hadoop.home.dir", "C:\\winutils")
+    val spark = SparkSession
+      .builder()
+      .appName("Spark SQL basic example")
+      .config("spark.master", "local")
+      .getOrCreate()
+    // Importing data
+    val df = spark.read.option("header", "true").csv("E:/kansas/Big data programming/Datasets/Datasets/201508_trip_data.csv").limit(500)
+    df.show()
+// importing csv and passing through graph dataframe
+    val vertices= df.select("Start Terminal","Start Station").toDF("id","name")
+    val vertices1=df.select("End Terminal","End Station").toDF("id","name")
+    val vertices_uni= vertices.union(vertices1)
+    val edges= df.select("Start Terminal","End Terminal","Duration").toDF("src","dst","relationship").distinct()
+
+   val g=GraphFrame(vertices_uni,edges)
+
+ //g.vertices.show()
+   //g.edges.show()
+
+    // triangle counting
+   val results=g.triangleCount.run().dropDuplicates()
+    results.show()
+    // shortest Path
+    val path1=g.shortestPaths.landmarks(Seq("50","82")).run().dropDuplicates()
+    path1.show()
+    //path1.write.csv("E:/kansas/Source code/Source code/SparkGraphframe/SparkGraphframe/output.csv")
+      // BFS
+   val path= g.bfs.fromExpr("name  == 'Market at 10th'").toExpr("name== 'Townsend at 7th'").maxPathLength(2).run()
+    path.show()
+// PageRank
+    val results3 = g.pageRank.resetProbability(0.15).maxIter(2).run()
+    results3.vertices.select("id", "pagerank").sort(desc("pagerank")).show()
+  g.vertices.write.csv("E:/kansas/Source code/Source code/SparkGraphframe/SparkGraphframe/outputvertices/vertices")
+   g.edges.write.csv("E:/kansas/Source code/Source code/SparkGraphframe/SparkGraphframe/outputedges/edge")
+  }
+}
+
