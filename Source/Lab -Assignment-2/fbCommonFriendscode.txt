@@ -1,0 +1,35 @@
+import org.apache.spark.{SparkConf, SparkContext}
+
+object  Friends {
+  def main(args: Array[String]) {
+    System.setProperty("hadoop.home.dir", "C:\\winutils")
+    val conf = new SparkConf().setAppName("CommonFriends").setMaster("local[*]")
+    // Create a Scala Spark Context.
+    val sc = new SparkContext(conf)
+    // Load our input data.
+    // Split up into words.
+    def pairMapper(line: String) = {
+      val words = line.split(" ")
+      val key = words(0)
+      val pairs = words.slice(1, words.size).map(friend => {
+        if (key < friend) (key, friend) else (friend, key)
+      })
+      pairs.map(pair => (pair, words.slice(1, words.size).toSet))
+    }
+    /*
+      * Reduce function groups by the key and intersects the set with the accumulator to find
+      * common friends.
+      */
+    def pairReducer(accumulator: Set[String], set: Set[String]) = {
+      accumulator intersect set
+    }
+    val data = sc.textFile("input.txt") // Repoint to a directory / file in HDFS to run on cluster
+    val results = data.flatMap(pairMapper)
+      .reduceByKey(pairReducer)
+      .filter(!_._2.isEmpty)
+      .sortByKey()
+    results.collect.foreach(line => { if  (!line._1._1.isEmpty)  {
+      println(s"${line._1} ${line._2.mkString(" ")}")
+    }})
+  }
+}
